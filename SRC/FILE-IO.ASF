@@ -1,0 +1,214 @@
+;**** Disk file's Input-Output Subroutines ****
+; (for MSX2 simple assembler system)
+SYSCAL EQU 0F37DH ;disk basic
+;SYSCAL EQU 0005H ;msx-dos
+;
+;*** entryies ***
+; F_FOUND : search file first
+; F_NEXT  : search file next
+; F_DMA   : set dma address
+; F_OPEN  : open file
+; F_MAKE  : make new file
+; F_CLOSE : close file
+; F_READ  : read file
+; F_WRITE : write file
+; F_RSIZE : set record size
+; F_RREC  : set random record no.
+;
+;*** fcb's format (37 bytes) ***
+; + 0,1  B: drive's no. (0:defalt 1:a 2:b ..)
+; + 1,8  B: filename
+; + 9,3  B: exp.tag.
+; +12,2  :  current block (defalt=00h)
+; +14,2  A: record size
+; +16,4  :  file size
+; +20,2  :  date
+; +22,2  :  time
+; +24,1  :  device ID (40h+drive no.)
+; +25,1  :  dirctory location
+; +26,2  :  head crruster no.
+; +28,2  :  last-accucesed curruster no.
+; +30,2  :  crruster's offset between head to last
+; +32,1  A: current record (for seiquencial accucess)
+; +33,4  A: random record (for random accucess & random block accucess)
+;       (B:set by usser before systemcall)
+;       (A:setby user after systemcall)
+;
+;*** directory's format (32 bytes) ***
+; + 0,8  : filename
+; + 8,3  : exp.tag.
+; +11,1  : attribute (DOS1:hidden bit only)
+; +12,1  : (DOS2 only) deleted filename's head character
+; +13,9  : ---
+; +22,2  : time
+; +24,2  : date
+; +26,2  : head-crruster's no.
+; +28,4  : file size 
+;
+;*** labels ***
+_FOPEN EQU 0FH
+_SETDMA EQU 1AH
+_RDRND EQU 27H
+_WRRND EQU 26H
+_FCLOSE EQU 10H
+_FMAKE EQU 16H
+_SFIRST EQU 11H
+_SNEXT EQU 12H
+;
+;*** File search at First time ***
+;
+; DE=FCB
+;
+;output
+; DMA=DIRCTORY ENTRY
+;
+;USE:ALL
+;
+F_FOND;
+ LD C,_SFIRST
+ CALL SYSCAL
+;
+ OR A
+ RET
+;
+;*** File search at Next time ***
+;
+; DE=FCB
+;
+;output
+; DMA=directory entry
+;
+F_NEXT;
+ LD C,_SNEXT
+ CALL SYSCAL
+;
+ OR A
+ RET
+;
+;*** Make New file ***
+;
+; DE=FCB
+; HL=FILE NAME ADDRESS
+;
+;USE:ALL
+;
+F_MAKE;
+ LD C,_FMAKE
+ CALL SYSCAL
+;
+ OR A
+ RET
+;
+;*** Write File ***
+;
+; DE=FCB
+; HL=DATA SIZE
+;
+;USE:ALL
+;
+F_WRITE;
+ LD C,_WRRND
+ CALL SYSCAL
+;
+ OR A
+ RET
+;
+;
+;*** Close File ***
+; DE=FCB
+; USE:ALL
+;
+F_CLOSE;
+ LD C,_FCLOSE
+ CALL SYSCAL
+;
+ OR A
+ RET
+;
+;*** Open File ***
+;
+; DE=FCB
+; USE:ALL
+;
+F_OPEN;
+ PUSH IX
+ PUSH DE
+ LD C,_FOPEN
+ CALL SYSCAL
+;
+ POP IX
+;
+ LD (IX+14),1
+ LD (IX+15),0 ;RECORD SIZE= 1byte
+;
+ LD (IX+33),0
+ LD (IX+34),0
+ LD (IX+35),0
+ LD (IX+36),0 ;RANDOM RECORD No.= 0
+;
+ POP IX
+;
+ OR A
+ RET
+;
+;*** Read file ***
+;
+; DE=FCB
+; HL=RECORD É ¶½Þ
+;
+;OUTPUT
+; HL=¼Þ¯»²Æ ÖÝÀÞ ¶½Þ
+;
+;USE:ALL
+;
+F_READ
+ LD C,_RDRND
+ CALL SYSCAL
+;
+ OR A
+ RET
+;
+;*** Set DMA Address ***
+;
+; DE=DMA ADDRESS
+;
+F_DMA;
+ LD C,_SETDMA
+ CALL SYSCAL
+ RET
+;
+;*** Set Random record ***
+;
+; DE=FCB
+; AHL=RANDOM REC. (3 bytes)
+;  (000000-FFFFFFH)
+;
+F_RREC;
+ PUSH IX
+;
+ PUSH DE
+ POP IX
+;
+ LD (IX+33),L
+ LD (IX+34),H
+ LD (IX+35),A
+ LD (IX+36),0
+;
+ POP IX
+;
+ RET
+;
+;*** Set Record size ***
+;
+; DE=FCB
+; HL=REC.SIZE
+;
+F_RSIZE;
+ PUSH IX
+ PUSH DE
+ POP IX
+ LD (IX+14),L
+ LD (IX+15),H
+ POP IX
+ RET
+
